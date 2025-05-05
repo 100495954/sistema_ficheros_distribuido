@@ -16,6 +16,10 @@ class client :
     # ****************** ATTRIBUTES ******************
     _server = None
     _port = -1
+    _listen_sock = None
+    _listen_thread = None
+    _user_connected = None
+    _keep_listening = True
 
     # ******************** METHODS *******************
 
@@ -77,20 +81,24 @@ class client :
         #  Write your code here
         return client.RC.ERROR
 
-
+    @staticmethod
+    def servicio_cliente():
+        while client._keep_listening:
+            #manejar peticiones aqui
+            print("Hola")
     
     @staticmethod
     def  connect(user) :
         #1 y 2 socket de escucha del cliente, busco puerto válido libre
-        listen_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        listen_sock.bind(('', 0))
-        listen_port = listen_sock.getsockname()[1]
-        listen_sock.listen(5)
+        client._listen_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client._listen_sock.bind(('', 0))
+        listen_port = client._listen_sock.getsockname()[1]
+        client._listen_sock.listen(5)
 
         #3 hilo para tratar las peticiones de escucha
         # cambiar servicio cliente, por la que realize el servidor
         # de escucha del cliente (q ahora mismo no se cual es)
-        threading.Thread(target=client.servicio_cliente, args=(listen_sock), daemon=True).start()
+        client._listen_thread = threading.Thread(target=client.servicio_cliente, daemon=True).start()
 
         #4 enviar solicitud de conexión al servidor
         sd = client.socket_cliente()
@@ -114,6 +122,7 @@ class client :
         respuesta = ord(client.recibir(sd))
         if (respuesta == 0):
             print(f"Éxito conectando al usuario {user}\n")
+            client._user_connected = user
             print("CONNECT OK\n")
         elif (respuesta == 1):
             print(f"El usuario {user} no existe\n")
@@ -132,7 +141,51 @@ class client :
     
     @staticmethod
     def  disconnect(user) :
-        #  Write your code here
+        #1 conectar al servidor
+        sd = client.socket_cliente()
+        if (sd == -1):
+            return client.RC.ERROR
+        
+        # enviar cadena indicando la operacion
+        mensaje = "DISCONNECT\0"
+        if (client.send(sd, mensaje) != 0):
+            print("Error al enviar la operación\n")
+
+        # enviar cadena indicando el nombre del usuario
+        if (client.send(sd, user) != 0):
+            print("Error al enviar el nombre del usuario\n")
+
+        # recibir byte del servidor
+        respuesta = ord(client.recibir(sd))
+        if (respuesta == 0):
+            print(f"Éxito desconectando al usuario {user}\n")
+            client._user_connected = None
+            print("DISCONNECT OK\n")
+        elif (respuesta == 1):
+            print(f"El usuario {user} no existe\n")
+            print("DISCONNECT FAIL, USER DOES NOT EXIST\n")
+        elif (respuesta == 2):
+            print(f"El usuario {user} no está conectado\n")
+            print("DISCONNECT FAIL, USER NOT CONNECTED\n")
+        else:
+            print("Error al recibir byte del servidor\n")
+            print("DISCONNECT FAIL\n")
+
+        # cerrar la conexión con el servidor
+        sd.close()
+
+        # detener el hilo creado por connect
+        client._keep_listening = False
+        if client._listen_sock:
+            try:
+                client._listen_sock.close()
+            except Exception:
+                pass
+
+        client._listen_sock = None
+        client._listen_thread = None
+        client._user_connected = None
+
         return client.RC.ERROR
 
     @staticmethod
@@ -188,7 +241,12 @@ class client :
 
                     elif(line[0]=="CONNECT") :
                         if (len(line) == 2) :
-                            client.connect(line[1])
+                            # Compruebo si ya hay otro usuario conectado previamente
+                            if (client._user_connected == None):
+                                client.connect(line[1])
+                            else:
+                                client.disconnect(client._user_connected)
+                                client.connect(line[1])
                         else :
                             print("Syntax error. Usage: CONNECT <userName>")
                     
@@ -232,6 +290,7 @@ class client :
 
                     elif(line[0]=="QUIT") :
                         if (len(line) == 1) :
+                            client.disconnect(client._user_connected)
                             break
                         else :
                             print("Syntax error. Use: QUIT")
