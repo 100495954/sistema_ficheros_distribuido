@@ -1,6 +1,7 @@
 from enum import Enum
 import argparse
 import socket
+import threading
 
 class client :
 
@@ -50,7 +51,7 @@ class client :
         return 0
 
     @staticmethod
-    def recivir(sd, buffer = 1024):
+    def recibir(sd, buffer = 1024):
         try:
             datos = sd.recv(buffer)
             return datos.decode()  # Convertir de bytes a str
@@ -80,10 +81,54 @@ class client :
     
     @staticmethod
     def  connect(user) :
-        #  Write your code here
+        #1 y 2 socket de escucha del cliente, busco puerto válido libre
+        listen_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        listen_sock.bind(('', 0))
+        listen_port = listen_sock.getsockname()[1]
+        listen_sock.listen(5)
+
+        #3 hilo para tratar las peticiones de escucha
+        # cambiar servicio cliente, por la que realize el servidor
+        # de escucha del cliente (q ahora mismo no se cual es)
+        threading.Thread(target=client.servicio_cliente, args=(listen_sock), daemon=True).start()
+
+        #4 enviar solicitud de conexión al servidor
+        sd = client.socket_cliente()
+        if (sd == -1):
+            return client.RC.ERROR
+        
+        # enviar cadena indicando la operacion
+        mensaje = "CONNECT\0"
+        if (client.send(sd, mensaje) != 0):
+            print("Error al enviar la operación\n")
+
+        # enviar cadena indicando el nombre del usuario
+        if (client.send(sd, user) != 0):
+            print("Error al enviar el nombre del usuario\n")
+
+        # enviar puerto de escucha del cliente como cadena
+        if (client.send(sd, str(listen_port)) != 0):
+            print("Error al enviar el puerto de escucha\n")
+
+        # recibir byte del servidor
+        respuesta = ord(client.recibir(sd))
+        if (respuesta == 0):
+            print(f"Éxito conectando al usuario {user}\n")
+            print("CONNECT OK\n")
+        elif (respuesta == 1):
+            print(f"El usuario {user} no existe\n")
+            print("CONNECT FAIL, USER DOES NOT EXIST\n")
+        elif (respuesta == 2):
+            print(f"El usuario {user} ya está conectado\n")
+            print("USER ALREADY CONNECTED\n")
+        else:
+            print("Error al recibir byte del servidor\n")
+            print("CONNECT FAIL\n")
+
+        # cerrar la conexión con el servidor
+        sd.close()
+
         return client.RC.ERROR
-
-
     
     @staticmethod
     def  disconnect(user) :
