@@ -1,4 +1,4 @@
-
+#include "funciones.h"
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,7 +22,15 @@ void *tratar_peticion(void *arg) {
     memset(buffer, 0, sizeof(buffer));
     int rcv = recv(sc, buffer, sizeof(buffer),0);
     if (rcv<0){
-        printf("Error al recibir\n");
+        printf("Error al recibir la operacion\n");
+    }
+    if (strcmp(buffer, "REGISTER")==0){
+        char username[255];
+        int rcv = recv(sc, username, sizeof(username),0);
+        if (rcv<0){
+            printf("Error al recibir el username\n");
+        }
+        int status = register_user(username);
     }
 
     
