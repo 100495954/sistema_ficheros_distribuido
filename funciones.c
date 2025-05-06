@@ -67,3 +67,43 @@ int unregister_user(char *username){
     pthread_mutex_unlock(&mutex_server);
     return 1;
 }
+
+// Función que devuelve 1 si encuentra al usuario en 
+// la estructura de datos y 2 si no
+int exist_user(char *username){
+    pthread_mutex_lock(&mutex_server);
+    struct user *temp = head;
+    while (temp != NULL) {
+        if (strcmp(temp->username ,username) == 0){
+            // El usuario está registrado
+            pthread_mutex_unlock(&mutex_server);
+            return 1;
+        }
+        temp = temp->next;
+    }
+    pthread_mutex_unlock(&mutex_server);
+    return 2;
+}
+
+// Función que añade un puerto a un usuario previamente registrado
+int connect_user(char *username, int port){
+    pthread_mutex_lock(&mutex_server);
+    struct user *temp = head;
+    while (temp != NULL) {
+        if (strcmp(temp->username ,username) == 0){
+            // El usuario está registrado
+            if (temp->port == 0) {
+                // Usuario no conectado
+                temp->port = port;
+                pthread_mutex_unlock(&mutex_server);
+                return 0;
+            } else {
+                // El usuario ya estaba conectado previamente
+                return 2;
+            }
+        }
+        temp = temp->next;
+    }
+    pthread_mutex_unlock(&mutex_server);
+    return -1;
+}

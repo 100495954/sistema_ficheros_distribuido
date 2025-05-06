@@ -65,7 +65,7 @@ class client :
 
     @staticmethod
     def register(user):
-        operacion = "REGISTER"
+        operacion = "REGISTER\0"
         sd = client.socket_cliente()
         if sd == -1:
             return client.RC.ERROR
@@ -75,17 +75,17 @@ class client :
             return client.RC.ERROR
 
         # Esperar confirmación
-        ack = client.recivir(sd, 1)
-        if ack != '0':
-            print("c> REGISTER FAIL\n")
-            return client.RC.ERROR
+        #ack = client.recibir(sd, 1)
+        #if ack != '0':
+        #    print("c> REGISTER FAIL\n")
+        #    return client.RC.ERROR
 
         # Enviar username
-        if client.enviar(sd, user) == -1:
+        if client.enviar(sd, (user + '\0')) == -1:
             return client.RC.ERROR
 
         # Recibir respuesta
-        status = client.recivir(sd)
+        status = client.recibir(sd)
         status = int(status)
 
         if status == 2:
@@ -102,7 +102,7 @@ class client :
    
     @staticmethod
     def  unregister(user) :
-        operacion = "UNREGISTER"
+        operacion = "UNREGISTER\0"
         sd = client.socket_cliente()
         if sd == -1:
             return client.RC.ERROR
@@ -112,17 +112,17 @@ class client :
             return client.RC.ERROR
 
         # Esperar confirmación
-        ack = client.recivir(sd, 1)
-        if ack != '0':
-            print("c> UNREGISTER FAIL\n")
-            return client.RC.ERROR
+        #ack = client.recibir(sd, 1)
+        #if ack != '0':
+        #    print("c> UNREGISTER FAIL\n")
+        #    return client.RC.ERROR
 
         # Enviar username
-        if client.enviar(sd, user) == -1:
+        if client.enviar(sd, (user + '\0')) == -1:
             return client.RC.ERROR
 
         # Recibir respuesta
-        status = client.recivir(sd)
+        status = client.recibir(sd)
         status = int(status)
 
         if status == 2:
@@ -152,7 +152,7 @@ class client :
         #3 hilo para tratar las peticiones de escucha
         # cambiar servicio cliente, por la que realize el servidor
         # de escucha del cliente (q ahora mismo no se cual es)
-        client._listen_thread = threading.Thread(target=client.servicio_cliente, daemon=True).start()
+        #client._listen_thread = threading.Thread(target=client.servicio_cliente, daemon=True).start()
 
         #4 enviar solicitud de conexión al servidor
         sd = client.socket_cliente()
@@ -161,32 +161,28 @@ class client :
         
         # enviar cadena indicando la operacion
         mensaje = "CONNECT\0"
-        if (client.send(sd, mensaje) != 0):
+        if (client.enviar(sd, mensaje) != 0):
             print("Error al enviar la operación\n")
 
         # enviar cadena indicando el nombre del usuario
-        if (client.send(sd, user) != 0):
+        if (client.enviar(sd, (user + '\0')) != 0):
             print("Error al enviar el nombre del usuario\n")
 
         # enviar puerto de escucha del cliente como cadena
-        if (client.send(sd, str(listen_port)) != 0):
+        if (client.enviar(sd, (str(listen_port) + '\0')) != 0):
             print("Error al enviar el puerto de escucha\n")
 
         # recibir byte del servidor
-        respuesta = ord(client.recibir(sd))
+        respuesta = int(client.recibir(sd))
         if (respuesta == 0):
-            print(f"Éxito conectando al usuario {user}\n")
             client._user_connected = user
-            print("CONNECT OK\n")
+            print("c> CONNECT OK\n")
         elif (respuesta == 1):
-            print(f"El usuario {user} no existe\n")
-            print("CONNECT FAIL, USER DOES NOT EXIST\n")
+            print("c> CONNECT FAIL, USER DOES NOT EXIST\n")
         elif (respuesta == 2):
-            print(f"El usuario {user} ya está conectado\n")
-            print("USER ALREADY CONNECTED\n")
+            print("c> USER ALREADY CONNECTED\n")
         else:
-            print("Error al recibir byte del servidor\n")
-            print("CONNECT FAIL\n")
+            print("c> CONNECT FAIL\n")
 
         # cerrar la conexión con el servidor
         sd.close()
@@ -244,7 +240,61 @@ class client :
 
     @staticmethod
     def  publish(fileName,  description) :
-        #  Write your code here
+        #1 conectar al servidor
+        sd = client.socket_cliente()
+        if (sd == -1):
+            return client.RC.ERROR
+        
+        # enviar cadena indicando la operacion
+        mensaje = "PUBLISH\0"
+        if (client.send(sd, mensaje) != 0):
+            print("Error al publicar un fichero\n")
+            return
+
+        # enviar cadena indicando el nombre del usuario
+        if (client.send(sd, client._user_connected) != 0):
+            print("Error al enviar el nombre del usuario\n")
+            return 
+
+        # enviar cadena con el path absoluto del fichero
+        if ' ' in fileName:
+            print("Error, la ruta contiene espacios en blanco")
+            return
+        if len(fileName.encode('utf-8')) > 256:
+            print("Error, la ruta supera los 256 bytes permitidos")
+            return
+        if (client.send(sd, fileName) != 0):
+            print("Error al enviar la ruta del fichero\n")
+            return 
+
+        # enviar cadena de caracteres con la descripción del contenido
+        if len(description.encode('utf-8')) > 256:
+            print("Error, la cadena de caracteres supera los 256 bytes permitidos")
+            return
+        if (client.send(sd, description) != 0):
+            print("Error al enviar la descripción del fichero\n")
+            return
+
+        # recibir byte del servidor
+        respuesta = ord(client.recibir(sd))
+        if (respuesta == 0):
+            print(f"Éxito publicando el fichero {fileName}\n")
+            print("PUBLISH OK\n")
+        elif (respuesta == 1):
+            print(f"El usuario {user} no está registrado en el sistema\n")
+            print("PUBLISH FAIL, USER DOES NOT EXIST\n")
+        elif (respuesta == 2):
+            print(f"El usuario {user} no está conectado\n")
+            print("PUBLISH FAIL, USER NOT CONNECTED\n")
+        elif (respuesta == 3):
+            print(f"El archivo {fileName} ya ha sido publicado por el usuario\n")
+            print("PUBLISH FAIL, CONTENT ALREADY PUBLISHED\n")
+        else:
+            print("Error al recibir byte del servidor\n")
+            print("PUBLISH FAIL\n")
+
+        # cerrar la conexión con el servidor
+        sd.close()
         return client.RC.ERROR
 
     @staticmethod
@@ -308,7 +358,10 @@ class client :
                         if (len(line) >= 3) :
                             #  Remove first two words
                             description = ' '.join(line[2:])
-                            client.publish(line[1], description)
+                            if client._user_connected != None:
+                                client.publish(line[1], description)
+                            else:
+                                print("No hay ningún usuario conectado\n")
                         else :
                             print("Syntax error. Usage: PUBLISH <fileName> <description>")
 
@@ -332,7 +385,10 @@ class client :
 
                     elif(line[0]=="DISCONNECT") :
                         if (len(line) == 2) :
-                            client.disconnect(line[1])
+                            if client._user_connected != None:
+                                client.disconnect(line[1])
+                            else:
+                                print(f"El usuario {user} no está conectado\n")
                         else :
                             print("Syntax error. Usage: DISCONNECT <userName>")
 

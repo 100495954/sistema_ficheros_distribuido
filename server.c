@@ -13,6 +13,22 @@ pthread_mutex_t sync_mutex;
 pthread_cond_t sync_cond;
 int sync_copied = 0;
 
+// Funcion para leer cadenas del cliente hasta encontrar \0
+int recibir_peticion(int sc, char *buffer, size_t max_len) {
+    size_t i = 0;
+    char c;
+    while (i < max_len - 1) {
+        // Recibimos los bytes del cliente uno a uno
+        // hasta encontrar \0
+        ssize_t r = recv(sc, &c, 1, 0);
+        if (r <= 0) return -1;
+
+        if (c == '\0') break;
+        buffer[i++] = c;
+    }
+    buffer[i] = '\0';
+    return 1;
+}
 
 void *tratar_peticion(void *arg) {
     char operacion[1024];
@@ -25,23 +41,22 @@ void *tratar_peticion(void *arg) {
     pthread_mutex_unlock(&sync_mutex);
 
     memset(operacion, 0, sizeof(operacion));
-    int rcv = recv(sc, operacion, sizeof(operacion), 0);
+    int rcv = recibir_peticion(sc, operacion, sizeof(operacion));
     if (rcv <= 0) {
         printf("Error al recibir la operación\n");
         close(sc);
         pthread_exit(NULL);
     }
 
-    operacion[rcv] = '\0';
+    //operacion[rcv] = '\0';
 
     // Enviar '0' para solicitar username
-    char ack = '0';
+    /*char ack = '0';
     if (send(sc, &ack, 1, 0) < 0) {
         printf("Error al enviar ACK\n");
         close(sc);
         pthread_exit(NULL);
-    }
-
+    }*/
 
     // Lógica según operación
     if (strcmp(operacion, "REGISTER") == 0) {
@@ -53,7 +68,6 @@ void *tratar_peticion(void *arg) {
             close(sc);
             pthread_exit(NULL);
         }
-
         username[rcv] = '\0';
         status = register_user(username);
     } else if (strcmp(operacion, "UNREGISTER") == 0) {
@@ -65,9 +79,31 @@ void *tratar_peticion(void *arg) {
             close(sc);
             pthread_exit(NULL);
         }
-
         username[rcv] = '\0';
         status = unregister_user(username);
+    } else if (strcmp(operacion, "CONNECT") == 0) {
+        char username[255];
+        char port[255];
+        memset(username, 0, sizeof(username));
+        rcv = recibir_peticion(sc, username, sizeof(username));
+        if (rcv <= 0) {
+            printf("Error al recibir el username\n");
+            close(sc);
+            pthread_exit(NULL);
+        } 
+        int exist = exist_user(username);
+        if (exist <= 0) {
+            printf("Error al comprobar si existe el usuario\n");
+            close(sc);
+            pthread_exit(NULL);
+        }
+        if (exist == 1) {
+            rcv = recibir_peticion(sc, port, sizeof(port));
+            status = connect_user(username, atoi(port));
+        } else {
+            printf("El usuario no existe\n");
+            status = 1;
+        }
     } else {
         printf("Operación no reconocida\n");
     }

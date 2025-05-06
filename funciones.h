@@ -19,4 +19,8 @@ int register_user(char *username);
 
 int unregister_user(char *username);
 
+int exist_user(char *username);
+
+int connect_user(char *username, int port);
+
 #endif
