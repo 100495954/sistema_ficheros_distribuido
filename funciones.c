@@ -7,6 +7,7 @@
 pthread_mutex_t mutex_server = PTHREAD_MUTEX_INITIALIZER;
 
 struct user *head = NULL;
+struct file *head_file = NULL;
 
 int register_user(char *username){
     struct user *new_user = (struct user *)malloc(sizeof(struct user));
@@ -132,3 +133,85 @@ int disconnect_user(char *username){
     pthread_mutex_unlock(&mutex_server);
     return -1;
 }
+
+int is_connected(char *username) {
+    pthread_mutex_lock(&mutex_server);
+    struct user *temp = head;
+    while (temp != NULL) {
+        if (strcmp(temp->username ,username) == 0){
+            // El usuario está registrado
+            if (temp->port != 0) {
+                // El usuario está conectado
+                pthread_mutex_unlock(&mutex_server);
+                return 1;
+            }
+            break;
+        }
+        temp = temp->next;
+    }
+    // El usuario no está registrado en el sistema
+    pthread_mutex_unlock(&mutex_server);
+    return 2;
+}
+
+int is_published(char *username, char *filename) {
+    pthread_mutex_lock(&mutex_server);
+    struct user *temp_user = head;
+    while (temp_user != NULL) {
+        if (strcmp(temp_user->username ,username) == 0){
+            // El usuario está registrado
+            struct file *temp_file = head_file;
+            while (temp_file != NULL) {
+                if (strcmp(temp_file->filename, filename) == 0) {
+                    // Fichero ya publicado anteriormente
+                    pthread_mutex_unlock(&mutex_server);
+                    return 3;
+                }
+                temp_file = temp_file->next;
+            }
+        }
+        temp_user = temp_user->next;
+    }
+    // El fichero no ha sido publicado por el usuario
+    pthread_mutex_unlock(&mutex_server);
+    return 1;
+}
+
+int publish_file(char *username, char *filename, char *description) {
+    pthread_mutex_lock(&mutex_server);
+    struct user *temp_user = head;
+    while (temp_user != NULL) {
+        if (strcmp(temp_user->username ,username) == 0){
+            // El usuario está registrado
+            struct file *new_file = (struct file *)malloc(sizeof(struct file));
+            if (new_file== NULL){
+                return -1;
+            }
+            strncpy(new_file->filename , filename, sizeof(new_file->filename)-1);
+            new_file->filename[sizeof(new_file->filename)-1] = '\0';
+            strncpy(new_file->description , description, sizeof(new_file->description)-1);
+            new_file->description[sizeof(new_file->description)-1] = '\0';
+            new_file->next = NULL;
+
+            if (head_file == NULL){
+                head_file = new_file;
+            }else{
+                struct file *temp_file = head_file;
+                
+                while (temp_file!=NULL){
+                    temp_file = temp_file->next;
+                }
+                temp_file->next = new_file;
+            }
+            
+            temp_user->file_list = new_file;
+            pthread_mutex_unlock(&mutex_server);
+            return 0;
+        }
+        temp_user = temp_user->next;
+        }
+    // El fichero no ha sido publicado por el usuario
+    pthread_mutex_unlock(&mutex_server);
+    return 1;
+}
+

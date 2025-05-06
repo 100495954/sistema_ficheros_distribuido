@@ -129,7 +129,7 @@ class client :
             print("c> UNREGISTER FAIL\n")
             return client.RC.ERROR
         elif status == 1:
-            print("c> USER DORES NOT EXISTS\n")
+            print("c> USER DOES NOT EXIST\n")
             return client.RC.USER_ERROR
 
         print("c> UNREGISTER OK\n")
@@ -244,12 +244,12 @@ class client :
         
         # enviar cadena indicando la operacion
         mensaje = "PUBLISH\0"
-        if (client.send(sd, mensaje) != 0):
+        if (client.enviar(sd, mensaje) != 0):
             print("Error al publicar un fichero\n")
             return
 
         # enviar cadena indicando el nombre del usuario
-        if (client.send(sd, client._user_connected) != 0):
+        if (client.enviar(sd, (client._user_connected + '\0')) != 0):
             print("Error al enviar el nombre del usuario\n")
             return 
 
@@ -260,7 +260,7 @@ class client :
         if len(fileName.encode('utf-8')) > 256:
             print("Error, la ruta supera los 256 bytes permitidos")
             return
-        if (client.send(sd, fileName) != 0):
+        if (client.enviar(sd, (fileName + '\0')) != 0):
             print("Error al enviar la ruta del fichero\n")
             return 
 
@@ -268,27 +268,22 @@ class client :
         if len(description.encode('utf-8')) > 256:
             print("Error, la cadena de caracteres supera los 256 bytes permitidos")
             return
-        if (client.send(sd, description) != 0):
+        if (client.enviar(sd, (description + '\0')) != 0):
             print("Error al enviar la descripción del fichero\n")
             return
 
         # recibir byte del servidor
-        respuesta = ord(client.recibir(sd))
+        respuesta = int(client.recibir(sd))
         if (respuesta == 0):
-            print(f"Éxito publicando el fichero {fileName}\n")
-            print("PUBLISH OK\n")
+            print("c> PUBLISH OK\n")
         elif (respuesta == 1):
-            print(f"El usuario {user} no está registrado en el sistema\n")
-            print("PUBLISH FAIL, USER DOES NOT EXIST\n")
+            print("c> PUBLISH FAIL, USER DOES NOT EXIST\n")
         elif (respuesta == 2):
-            print(f"El usuario {user} no está conectado\n")
-            print("PUBLISH FAIL, USER NOT CONNECTED\n")
+            print("c> PUBLISH FAIL, USER NOT CONNECTED\n")
         elif (respuesta == 3):
-            print(f"El archivo {fileName} ya ha sido publicado por el usuario\n")
-            print("PUBLISH FAIL, CONTENT ALREADY PUBLISHED\n")
+            print("c> PUBLISH FAIL, CONTENT ALREADY PUBLISHED\n")
         else:
-            print("Error al recibir byte del servidor\n")
-            print("PUBLISH FAIL\n")
+            print("c> PUBLISH FAIL\n")
 
         # cerrar la conexión con el servidor
         sd.close()
@@ -382,10 +377,7 @@ class client :
 
                     elif(line[0]=="DISCONNECT") :
                         if (len(line) == 2) :
-                            if client._user_connected != None:
-                                client.disconnect(line[1])
-                            else:
-                                print(f"El usuario {user} no está conectado\n")
+                            client.disconnect(line[1])
                         else :
                             print("Syntax error. Usage: DISCONNECT <userName>")
 

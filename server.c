@@ -85,9 +85,16 @@ void *tratar_peticion(void *arg) {
         char username[255];
         char port[255];
         memset(username, 0, sizeof(username));
+        memset(port, 0, sizeof(port));
         rcv = recibir_peticion(sc, username, sizeof(username));
         if (rcv <= 0) {
             printf("Error al recibir el username\n");
+            close(sc);
+            pthread_exit(NULL);
+        }
+        rcv = recibir_peticion(sc, port, sizeof(port));
+        if (rcv <= 0) {
+            printf("Error al recibir el puerto\n");
             close(sc);
             pthread_exit(NULL);
         } 
@@ -98,7 +105,6 @@ void *tratar_peticion(void *arg) {
             pthread_exit(NULL);
         }
         if (exist == 1) {
-            rcv = recibir_peticion(sc, port, sizeof(port));
             status = connect_user(username, atoi(port));
         } else {
             printf("El usuario no existe\n");
@@ -121,6 +127,52 @@ void *tratar_peticion(void *arg) {
         }
         if (exist == 1) {
             status = disconnect_user(username);
+        } else {
+            printf("El usuario no existe\n");
+            status = 1;
+        }
+    } else if (strcmp(operacion, "PUBLISH") == 0) {
+        char username[255];
+        char filename[255];
+        char description[255];
+        memset(username, 0, sizeof(username));
+        memset(filename, 0, sizeof(filename));
+        memset(description, 0, sizeof(description));
+        rcv = recibir_peticion(sc, username, sizeof(username));
+        if (rcv <= 0) {
+            printf("Error al recibir el username\n");
+            close(sc);
+            pthread_exit(NULL);
+        }
+        rcv = recibir_peticion(sc, filename, sizeof(filename));
+        if (rcv <= 0) {
+            printf("Error al recibir el filename\n");
+            close(sc);
+            pthread_exit(NULL);
+        }
+        rcv = recibir_peticion(sc, description, sizeof(description));
+        if (rcv <= 0) {
+            printf("Error al recibir la descriptcion\n");
+            close(sc);
+            pthread_exit(NULL);
+        }  
+        int exist = exist_user(username);
+        if (exist <= 0) {
+            printf("Error al comprobar si existe el usuario\n");
+            close(sc);
+            pthread_exit(NULL);
+        }
+        if (exist == 1) {
+            // El usuario existe
+            status = is_connected(username);
+            if (status == 1) {
+                // El usuario está conectado  
+                status = is_published(username, filename);
+                if (status == 1) {
+                    // El archivo no ha sido publicado por el usuario anteriormente
+                    status = publish_file(username, filename, description);
+                }
+            }
         } else {
             printf("El usuario no existe\n");
             status = 1;

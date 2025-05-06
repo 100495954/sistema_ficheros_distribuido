@@ -3,7 +3,7 @@
 
 struct file{
     char filename[255];
-    char descripcion[255];
+    char description[255];
     struct file *next;
 };
 
@@ -24,5 +24,11 @@ int exist_user(char *username);
 int connect_user(char *username, int port);
 
 int disconnect_user(char *username);
+
+int is_connected(char *username);
+
+int is_published(char *username, char *filename);
+
+int publish_file(char *username, char *filename, char *description);
 
 #endif
