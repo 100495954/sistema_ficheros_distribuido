@@ -59,22 +59,76 @@ class client :
             return None
 
     @staticmethod
-    def  register(user) :
-        operacion = "REGISTER\0"
+    def register(user):
+        operacion = "REGISTER"
         sd = client.socket_cliente()
-        if (sd == -1):
+        if sd == -1:
             return client.RC.ERROR
-        if (client.enviar==-1):
+
+        # Enviar operación
+        if client.enviar(sd, operacion) == -1:
             return client.RC.ERROR
-        
 
-        return client.RC.ERROR
+        # Esperar confirmación
+        ack = client.recivir(sd, 1)
+        if ack != '0':
+            print("c> REGISTER FAIL\n")
+            return client.RC.ERROR
 
+        # Enviar username
+        if client.enviar(sd, user) == -1:
+            return client.RC.ERROR
+
+        # Recibir respuesta
+        status = client.recivir(sd)
+        status = int(status)
+
+        if status == 2:
+            print("c> REGISTER FAIL\n")
+            return client.RC.ERROR
+        elif status == 1:
+            print("c> USERNAME IN USE\n")
+            return client.RC.USER_ERROR
+
+        print("c> REGISTER OK\n")
+        return client.RC.OK
+
+    
    
     @staticmethod
     def  unregister(user) :
-        #  Write your code here
-        return client.RC.ERROR
+        operacion = "UNREGISTER"
+        sd = client.socket_cliente()
+        if sd == -1:
+            return client.RC.ERROR
+
+        # Enviar operación
+        if client.enviar(sd, operacion) == -1:
+            return client.RC.ERROR
+
+        # Esperar confirmación
+        ack = client.recivir(sd, 1)
+        if ack != '0':
+            print("c> UNREGISTER FAIL\n")
+            return client.RC.ERROR
+
+        # Enviar username
+        if client.enviar(sd, user) == -1:
+            return client.RC.ERROR
+
+        # Recibir respuesta
+        status = client.recivir(sd)
+        status = int(status)
+
+        if status == 2:
+            print("c> UNREGISTER FAIL\n")
+            return client.RC.ERROR
+        elif status == 1:
+            print("c> USER DORES NOT EXISTS\n")
+            return client.RC.USER_ERROR
+
+        print("c> UNREGISTER OK\n")
+        return client.RC.OK
 
 
     
