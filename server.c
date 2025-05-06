@@ -104,6 +104,27 @@ void *tratar_peticion(void *arg) {
             printf("El usuario no existe\n");
             status = 1;
         }
+    } else if (strcmp(operacion, "DISCONNECT") == 0) {
+        char username[255];
+        memset(username, 0, sizeof(username));
+        rcv = recibir_peticion(sc, username, sizeof(username));
+        if (rcv <= 0) {
+            printf("Error al recibir el username\n");
+            close(sc);
+            pthread_exit(NULL);
+        } 
+        int exist = exist_user(username);
+        if (exist <= 0) {
+            printf("Error al comprobar si existe el usuario\n");
+            close(sc);
+            pthread_exit(NULL);
+        }
+        if (exist == 1) {
+            status = disconnect_user(username);
+        } else {
+            printf("El usuario no existe\n");
+            status = 1;
+        }
     } else {
         printf("Operación no reconocida\n");
     }

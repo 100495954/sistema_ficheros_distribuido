@@ -198,28 +198,24 @@ class client :
         
         # enviar cadena indicando la operacion
         mensaje = "DISCONNECT\0"
-        if (client.send(sd, mensaje) != 0):
+        if (client.enviar(sd, mensaje) != 0):
             print("Error al enviar la operación\n")
 
         # enviar cadena indicando el nombre del usuario
-        if (client.send(sd, user) != 0):
+        if (client.enviar(sd, (user + '\0')) != 0):
             print("Error al enviar el nombre del usuario\n")
 
         # recibir byte del servidor
-        respuesta = ord(client.recibir(sd))
+        respuesta = int(client.recibir(sd))
         if (respuesta == 0):
-            print(f"Éxito desconectando al usuario {user}\n")
             client._user_connected = None
-            print("DISCONNECT OK\n")
+            print("c> DISCONNECT OK\n")
         elif (respuesta == 1):
-            print(f"El usuario {user} no existe\n")
-            print("DISCONNECT FAIL, USER DOES NOT EXIST\n")
+            print("c> DISCONNECT FAIL, USER DOES NOT EXIST\n")
         elif (respuesta == 2):
-            print(f"El usuario {user} no está conectado\n")
-            print("DISCONNECT FAIL, USER NOT CONNECTED\n")
+            print("c> DISCONNECT FAIL, USER NOT CONNECTED\n")
         else:
-            print("Error al recibir byte del servidor\n")
-            print("DISCONNECT FAIL\n")
+            print("c> DISCONNECT FAIL\n")
 
         # cerrar la conexión con el servidor
         sd.close()
@@ -228,6 +224,7 @@ class client :
         client._keep_listening = False
         if client._listen_sock:
             try:
+                # cerrar el puerto de escucha del cliente
                 client._listen_sock.close()
             except Exception:
                 pass

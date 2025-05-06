@@ -23,4 +23,6 @@ int exist_user(char *username);
 
 int connect_user(char *username, int port);
 
+int disconnect_user(char *username);
+
 #endif

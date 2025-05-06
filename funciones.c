@@ -99,6 +99,31 @@ int connect_user(char *username, int port){
                 return 0;
             } else {
                 // El usuario ya estaba conectado previamente
+                pthread_mutex_unlock(&mutex_server);
+                return 2;
+            }
+        }
+        temp = temp->next;
+    }
+    pthread_mutex_unlock(&mutex_server);
+    return -1;
+}
+
+// Función que borra el puerto asociado a un usuario previamente
+int disconnect_user(char *username){
+    pthread_mutex_lock(&mutex_server);
+    struct user *temp = head;
+    while (temp != NULL) {
+        if (strcmp(temp->username ,username) == 0){
+            // El usuario está registrado
+            if (temp->port != 0) {
+                // Usuario conectado
+                temp->port = 0;
+                pthread_mutex_unlock(&mutex_server);
+                return 0;
+            } else {
+                // El usuario no estaba conectado previamente
+                pthread_mutex_unlock(&mutex_server);
                 return 2;
             }
         }
