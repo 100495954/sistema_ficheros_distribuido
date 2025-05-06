@@ -16,25 +16,26 @@ int register_user(char *username){
     }
     strncpy(new_user->username , username, sizeof(new_user->username)-1);
     new_user->username[sizeof(new_user->username)-1] = '\0';
-
-    int registrado = 0;
+    new_user->next = NULL;
 
     pthread_mutex_lock(&mutex_server);
     if (head == NULL){
         head = new_user;
     }else{
         struct user *temp = head;
+        struct user *prev = NULL;
         
         while (temp!=NULL){
             if (strcmp(username, temp->username)==0){
-                registrado = 1;
+                // Usuario ya registrado
+                free(new_user);
+                pthread_mutex_unlock(&mutex_server);
+                return 1;
             }
+            prev = temp;
             temp = temp->next;
         }
-        if (registrado ==1){
-            pthread_mutex_unlock(&mutex_server);
-            return 1;
-        }
+        prev->next = new_user;
     }
     pthread_mutex_unlock(&mutex_server);
     return 0;
@@ -180,6 +181,7 @@ int is_published(char *username, char *filename) {
 int publish_file(char *username, char *filename, char *description) {
     pthread_mutex_lock(&mutex_server);
     struct user *temp_user = head;
+    struct user *prev_user = NULL;
     while (temp_user != NULL) {
         if (strcmp(temp_user->username ,username) == 0){
             // El usuario está registrado
@@ -197,17 +199,20 @@ int publish_file(char *username, char *filename, char *description) {
                 head_file = new_file;
             }else{
                 struct file *temp_file = head_file;
+                struct file *prev_file = NULL;
                 
                 while (temp_file!=NULL){
+                    prev_file = temp_file;
                     temp_file = temp_file->next;
                 }
-                temp_file->next = new_file;
+                prev_file->next = new_file;
             }
-            
-            temp_user->file_list = new_file;
+
+            prev_user->file_list = new_file;
             pthread_mutex_unlock(&mutex_server);
             return 0;
         }
+        prev_user = temp_user;
         temp_user = temp_user->next;
         }
     // El fichero no ha sido publicado por el usuario
