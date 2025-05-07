@@ -84,7 +84,7 @@ int exist_user(char *username){
         temp = temp->next;
     }
     pthread_mutex_unlock(&mutex_server);
-    return 2;
+    return 0;
 }
 
 // Función que añade un puerto a un usuario previamente registrado
@@ -152,7 +152,7 @@ int is_connected(char *username) {
     }
     // El usuario no está registrado en el sistema
     pthread_mutex_unlock(&mutex_server);
-    return 2;
+    return 0;
 }
 
 int is_published(char *username, char *filename) {
@@ -166,7 +166,7 @@ int is_published(char *username, char *filename) {
                 if (strcmp(temp_file->filename, filename) == 0) {
                     // Fichero ya publicado anteriormente
                     pthread_mutex_unlock(&mutex_server);
-                    return 3;
+                    return 1;
                 }
                 temp_file = temp_file->next;
             }
@@ -175,13 +175,12 @@ int is_published(char *username, char *filename) {
     }
     // El fichero no ha sido publicado por el usuario
     pthread_mutex_unlock(&mutex_server);
-    return 1;
+    return 0;
 }
 
 int publish_file(char *username, char *filename, char *description) {
     pthread_mutex_lock(&mutex_server);
     struct user *temp_user = head;
-    struct user *prev_user = NULL;
     while (temp_user != NULL) {
         if (strcmp(temp_user->username ,username) == 0){
             // El usuario está registrado
@@ -208,15 +207,43 @@ int publish_file(char *username, char *filename, char *description) {
                 prev_file->next = new_file;
             }
 
-            prev_user->file_list = new_file;
+            temp_user->file_list = new_file;
             pthread_mutex_unlock(&mutex_server);
             return 0;
         }
-        prev_user = temp_user;
         temp_user = temp_user->next;
         }
     // El fichero no ha sido publicado por el usuario
     pthread_mutex_unlock(&mutex_server);
     return 1;
+}
+
+int delete_file(char *username, char *filename) {
+    pthread_mutex_lock(&mutex_server);
+    struct user *temp_user = head;
+    while (temp_user != NULL) {
+        if (strcmp(temp_user->username ,username) == 0){
+            // El usuario está registrado
+            if (head_file == NULL){
+                // Ningún archivo publicado
+                return 3;
+            }else{
+                struct file *temp_file = head_file;              
+                while (temp_file!=NULL){
+                    if (strcmp(temp_file->filename, filename) == 0){
+                        // Archivo encontrado
+                        memset(temp_file->filename, 0, sizeof(temp_file->filename));
+                        pthread_mutex_unlock(&mutex_server);
+                        return 0;
+                    }
+                    temp_file = temp_file->next;
+                }
+            }
+        }
+        temp_user = temp_user->next;
+        }
+    // El fichero no ha sido publicado por el usuario
+    pthread_mutex_unlock(&mutex_server);
+    return 3;
 }
 

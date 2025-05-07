@@ -291,7 +291,52 @@ class client :
 
     @staticmethod
     def  delete(fileName) :
-        #  Write your code here
+        #1 conectar al servidor
+        sd = client.socket_cliente()
+        if (sd == -1):
+            return client.RC.ERROR
+        
+        # enviar cadena indicando la operacion
+        mensaje = "DELETE\0"
+        if (client.enviar(sd, mensaje) != 0):
+            print("Error al publicar un fichero\n")
+            return
+
+        # enviar cadena indicando el nombre del usuario
+        if (client._user_connected == None):
+            user = ""
+        else:
+            user = client._user_connected
+        if (client.enviar(sd, (user + '\0')) != 0):
+            print("Error al enviar el nombre del usuario\n")
+            return 
+
+        # enviar cadena con el path absoluto del fichero
+        if ' ' in fileName:
+            print("Error, la ruta contiene espacios en blanco")
+            return
+        if len(fileName.encode('utf-8')) > 256:
+            print("Error, la ruta supera los 256 bytes permitidos")
+            return
+        if (client.enviar(sd, (fileName + '\0')) != 0):
+            print("Error al enviar la ruta del fichero\n")
+            return 
+
+        # recibir byte del servidor
+        respuesta = int(client.recibir(sd))
+        if (respuesta == 0):
+            print("c> DELETE OK\n")
+        elif (respuesta == 1):
+            print("c> DELETE FAIL, USER DOES NOT EXIST\n")
+        elif (respuesta == 2):
+            print("c> DELETE FAIL, USER NOT CONNECTED\n")
+        elif (respuesta == 3):
+            print("c> DELETE FAIL, CONTENT NOT PUBLISHED\n")
+        else:
+            print("c> DELETE FAIL\n")
+
+        # cerrar la conexión con el servidor
+        sd.close()
         return client.RC.ERROR
 
     @staticmethod

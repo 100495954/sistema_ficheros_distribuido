@@ -99,15 +99,16 @@ void *tratar_peticion(void *arg) {
             pthread_exit(NULL);
         } 
         int exist = exist_user(username);
-        if (exist <= 0) {
+        if (exist < 0) {
             printf("Error al comprobar si existe el usuario\n");
             close(sc);
             pthread_exit(NULL);
         }
         if (exist == 1) {
+            // El usuario existe
             status = connect_user(username, atoi(port));
         } else {
-            printf("El usuario no existe\n");
+            // El usuario no existe
             status = 1;
         }
     } else if (strcmp(operacion, "DISCONNECT") == 0) {
@@ -120,15 +121,16 @@ void *tratar_peticion(void *arg) {
             pthread_exit(NULL);
         } 
         int exist = exist_user(username);
-        if (exist <= 0) {
+        if (exist < 0) {
             printf("Error al comprobar si existe el usuario\n");
             close(sc);
             pthread_exit(NULL);
         }
         if (exist == 1) {
+            // El usuario existe
             status = disconnect_user(username);
         } else {
-            printf("El usuario no existe\n");
+            // El usuario no existe
             status = 1;
         }
     } else if (strcmp(operacion, "PUBLISH") == 0) {
@@ -157,24 +159,74 @@ void *tratar_peticion(void *arg) {
             pthread_exit(NULL);
         }  
         int exist = exist_user(username);
-        if (exist <= 0) {
+        if (exist < 0) {
             printf("Error al comprobar si existe el usuario\n");
             close(sc);
             pthread_exit(NULL);
         }
         if (exist == 1) {
             // El usuario existe
-            status = is_connected(username);
-            if (status == 1) {
+            int connected = is_connected(username);
+            if (connected == 1) {
                 // El usuario está conectado  
-                status = is_published(username, filename);
-                if (status == 1) {
+                int published = is_published(username, filename);
+                if (published == 0) {
                     // El archivo no ha sido publicado por el usuario anteriormente
                     status = publish_file(username, filename, description);
+                } else {
+                    // El archivo ya ha sido publicado por el usario
+                    status = 3;
                 }
+            } else {
+                // El usario no está conectado
+                status = 2;
             }
         } else {
-            printf("El usuario no existe\n");
+            // El usuario no existe
+            status = 1;
+        }
+    } else if (strcmp(operacion, "DELETE") == 0) {
+        char username[255];
+        char filename[255];
+        memset(username, 0, sizeof(username));
+        memset(filename, 0, sizeof(filename));
+        rcv = recibir_peticion(sc, username, sizeof(username));
+        if (rcv <= 0) {
+            printf("Error al recibir el username\n");
+            close(sc);
+            pthread_exit(NULL);
+        }
+        rcv = recibir_peticion(sc, filename, sizeof(filename));
+        if (rcv <= 0) {
+            printf("Error al recibir el filename\n");
+            close(sc);
+            pthread_exit(NULL);
+        } 
+        int exist = exist_user(username);
+        if (exist < 0) {
+            printf("Error al comprobar si existe el usuario\n");
+            close(sc);
+            pthread_exit(NULL);
+        }
+        if (exist == 1) {
+            // El usuario existe
+            int connected = is_connected(username);
+            if (connected == 1) {
+                // El usuario está conectado  
+                int published = is_published(username, filename);
+                if (published == 1) {
+                    // El archivo ya ha sido publicado por el usuario
+                    status = delete_file(username, filename);
+                } else {
+                    // El archivo no ha sido publicado por el usuario
+                    status = 3;
+                }
+            } else {
+                // El usuario no está conectado
+                status = 2;
+            }
+        } else {
+            // El usuario no existe
             status = 1;
         }
     } else {

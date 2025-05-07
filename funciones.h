@@ -31,4 +31,6 @@ int is_published(char *username, char *filename);
 
 int publish_file(char *username, char *filename, char *description);
 
+int delete_file(char *username, char *filename);
+
 #endif
