@@ -247,6 +247,23 @@ int delete_file(char *username, char *filename) {
     return 3;
 }
 
+int check_conexion(char *username){
+    struct user *temp = head;
+    while (temp != NULL) {
+        if (strcmp(temp->username ,username) == 0){
+            // El usuario está registrado
+            if (temp->port != 0) {
+                // El usuario está conectado
+                pthread_mutex_unlock(&mutex_server);
+                return 1;
+            }
+            break;
+        }
+        temp = temp->next;
+    }
+    return 0;
+}
+
 int list_users(char *username, struct user **lista_usuarios){
     pthread_mutex_lock(&mutex_server);
     struct user *temp_user = head;
@@ -262,7 +279,7 @@ int list_users(char *username, struct user **lista_usuarios){
         pthread_mutex_unlock(&mutex_server);
         return 1;
     }
-    int connected  = is_connected(username);
+    int connected  = check_conexion(username);
     if (connected == 0){
         pthread_mutex_unlock(&mutex_server);
         return 2;
@@ -271,7 +288,7 @@ int list_users(char *username, struct user **lista_usuarios){
     int n = 0;
     while (temp_user != NULL){
         if (strcmp(temp_user->username, username) != 0) {
-            int conection = is_connected(temp_user->username);
+            int conection = check_conexion(temp_user->username);
             if (conection == 1) {
                 lista_usuarios[n] = temp_user;
                 ++n;
@@ -288,7 +305,7 @@ int connected_count(char *username){
     struct user *temp = head;
     while (temp!=NULL){
         if (strcmp(temp->username, username) != 0) {
-            int conection = is_connected(temp->username);
+            int conection = check_conexion(temp->username);
             if (conection == 1) {
                 ++count;
             }

@@ -70,6 +70,7 @@ void *tratar_peticion(void *arg) {
         }
         username[rcv] = '\0';
         status = register_user(username);
+        printf("%d\n", status);
     } else if (strcmp(operacion, "UNREGISTER") == 0) {
         char username[255];
         memset(username, 0, sizeof(username));
@@ -241,17 +242,16 @@ void *tratar_peticion(void *arg) {
         username[rcv] = '\0';
         int users =  connected_count(username);
         struct user * list[50];
-        printf("lista creada\n");
         status = list_users(username, list);
-        printf("funcion realizada %d\n", status);
         if (status == 0){
-            char respuesta[1024];
+            char usuarios[1024];
             char aux[1024];
             for (int i =0 ;i < users; ++i){
-                sprintf(aux, "\t%s %s %d \n", list[i]->username , list[i]->ip_route, list[i]->port);
-                strcat(respuesta, aux);
+                sprintf(aux, "\t %s %s %d \n", list[i]->username , list[i]->ip_route, list[i]->port);
+                strcat(usuarios, aux);
             }
-            printf("%s\n",respuesta);
+            strcat(usuarios, "\0");
+            send(sc,usuarios, strlen(usuarios),0);
         }
     }else {
         printf("Operación no reconocida\n");

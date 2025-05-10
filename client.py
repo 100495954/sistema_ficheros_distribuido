@@ -354,6 +354,8 @@ class client :
             return client.RC.ERROR
 
         # Recibir respuesta
+        listausuarios = client.recibir(sd)
+
         status = client.recibir(sd)
         status = int(status)
 
@@ -366,7 +368,7 @@ class client :
         elif status ==3:
             print("c > LIST_USERS FAIL\n")
             return client.RC.USER_ERROR
-        print("c> LIST_USERS OK\n")
+        print("c> LIST_USERS OK\n", listausuarios)
         return client.RC.OK
 
  
