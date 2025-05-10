@@ -229,7 +229,31 @@ void *tratar_peticion(void *arg) {
             // El usuario no existe
             status = 1;
         }
-    } else {
+    } else if (strcmp(operacion, "LIST_USERS")==0){
+        char username[255];
+        memset(username, 0, sizeof(username));
+        rcv = recv(sc, username, sizeof(username), 0);
+        if (rcv <= 0) {
+            printf("Error al recibir el username\n");
+            close(sc);
+            pthread_exit(NULL);
+        }
+        username[rcv] = '\0';
+        int users =  connected_count(username);
+        struct user * list[50];
+        printf("lista creada\n");
+        status = list_users(username, list);
+        printf("funcion realizada %d\n", status);
+        if (status == 0){
+            char respuesta[1024];
+            char aux[1024];
+            for (int i =0 ;i < users; ++i){
+                sprintf(aux, "\t%s %s %d \n", list[i]->username , list[i]->ip_route, list[i]->port);
+                strcat(respuesta, aux);
+            }
+            printf("%s\n",respuesta);
+        }
+    }else {
         printf("Operación no reconocida\n");
     }
 

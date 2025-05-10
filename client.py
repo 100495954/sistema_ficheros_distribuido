@@ -341,9 +341,35 @@ class client :
 
     @staticmethod
     def  listusers() :
-        #  Write your code here
-        return client.RC.ERROR
+        operacion = "LIST_USERS\0"
+        sd = client.socket_cliente()
+        if sd == -1:
+            return client.RC.ERROR
+        username = input("c> ESCRIBE TU USERNAME: ")
+        # Enviar operación
+        if client.enviar(sd, operacion) == -1:
+            return client.RC.ERROR
+        
+        if client.enviar(sd, (username + '\0')) == -1:
+            return client.RC.ERROR
 
+        # Recibir respuesta
+        status = client.recibir(sd)
+        status = int(status)
+
+        if status == 2:
+            print("c > LIST_USERS FAIL , USER NOT CONNECTED\n")
+            return client.RC.ERROR
+        elif status == 1:
+            print("c > LIST_USERS FAIL , USER DOES NOT EXIST\n")
+            return client.RC.USER_ERROR
+        elif status ==3:
+            print("c > LIST_USERS FAIL\n")
+            return client.RC.USER_ERROR
+        print("c> LIST_USERS OK\n")
+        return client.RC.OK
+
+ 
     @staticmethod
     def  listcontent(user) :
         #  Write your code here

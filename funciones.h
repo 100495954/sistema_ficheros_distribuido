@@ -33,4 +33,8 @@ int publish_file(char *username, char *filename, char *description);
 
 int delete_file(char *username, char *filename);
 
+int list_users(char *username, struct user **lista_usuarios);
+
+int connected_count(char *username);
+
 #endif

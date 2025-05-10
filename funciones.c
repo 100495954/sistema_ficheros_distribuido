@@ -247,3 +247,55 @@ int delete_file(char *username, char *filename) {
     return 3;
 }
 
+int list_users(char *username, struct user **lista_usuarios){
+    pthread_mutex_lock(&mutex_server);
+    struct user *temp_user = head;
+    int exist = 0;
+    while (temp_user!=NULL){
+        if (strcmp(temp_user->username, username)==0){
+            exist = 1;
+            break;
+        }
+        temp_user = temp_user->next;
+    }
+    if(exist == 0){
+        pthread_mutex_unlock(&mutex_server);
+        return 1;
+    }
+    int connected  = is_connected(username);
+    if (connected == 0){
+        pthread_mutex_unlock(&mutex_server);
+        return 2;
+    }
+    temp_user = head;
+    int n = 0;
+    while (temp_user != NULL){
+        if (strcmp(temp_user->username, username) != 0) {
+            int conection = is_connected(temp_user->username);
+            if (conection == 1) {
+                lista_usuarios[n] = temp_user;
+                ++n;
+            }
+        }
+        temp_user = temp_user->next;
+    }
+    pthread_mutex_unlock(&mutex_server);
+    return 0;
+}
+int connected_count(char *username){
+    pthread_mutex_lock(&mutex_server);
+    int count= 0;
+    struct user *temp = head;
+    while (temp!=NULL){
+        if (strcmp(temp->username, username) != 0) {
+            int conection = is_connected(temp->username);
+            if (conection == 1) {
+                ++count;
+            }
+        } 
+        temp=temp->next;
+    }
+    pthread_mutex_unlock(&mutex_server);
+    return count;
+}
+
