@@ -99,12 +99,12 @@ class client :
             return client.RC.ERROR
         
         # Obtener y enviar datetime
-        datetime = client.obtener_datetime()
+        '''datetime = client.obtener_datetime()
         print(datetime)
         if datetime is None:
             return client.RC.ERROR
         if client.enviar(sd, (datetime + '\0')) == -1:
-            return client.RC.ERROR
+            return client.RC.ERROR'''
 
         # Recibir respuesta
         status = client.recibir(sd)

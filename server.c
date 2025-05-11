@@ -70,13 +70,13 @@ void *tratar_peticion(void *arg) {
             close(sc);
             pthread_exit(NULL);
         }
-        rcv = recibir_peticion(sc, datetime, sizeof(datetime));
+        /*rcv = recibir_peticion(sc, datetime, sizeof(datetime));
         if (rcv <= 0) {
             printf("Error al recibir el username\n");
             close(sc);
             pthread_exit(NULL);
         }
-        printf("%s", datetime);
+        printf("%s", datetime);*/
         username[rcv] = '\0';
         status = register_user(username);
         printf("%d\n", status);
