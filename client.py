@@ -373,9 +373,50 @@ class client :
 
  
     @staticmethod
-    def  listcontent(user) :
-        #  Write your code here
+    def listcontent(user):
+        sd = client.socket_cliente()
+        if sd == -1:
+            return client.RC.ERROR
+            
+        # Send operation
+        operacion = "LIST_CONTENT\0"
+        if client.enviar(sd, operacion) == -1:
+            return client.RC.ERROR
+        
+        # Send current username (the one making the request)
+        current_user = client._user_connected if client._user_connected else ""
+        if client.enviar(sd, (current_user + '\0')) == -1:
+            return client.RC.ERROR
+        # Send owner username (the one whose files we want to list)
+        if client.enviar(sd, (user + '\0')) == -1:
+            return client.RC.ERROR
+        
+        # Receive file list
+        listafiles = client.recibir(sd)
+        if listafiles is None:
+            return client.RC.ERROR
+        
+        # Receive status
+        status = client.recibir(sd)
+        if status is None:
+            return client.RC.ERROR
+        
+        status = int(status)
+        
+        if status == 0:
+            print(f"c> LIST_CONTENT OK\n{listafiles}")
+            return client.RC.OK
+        elif status == 1:
+            print("c> LIST_CONTENT FAIL, USER DOES NOT EXIST\n")
+        elif status == 2:
+            print("c> LIST_CONTENT FAIL, USER NOT CONNECTED\n")
+        elif status == 3:
+            print("c> LIST_CONTENT FAIL, REMOTE USER DOES NOT EXIST\n")
+        else:
+            print("c> LIST_CONTENT FAIL\n")
+        
         return client.RC.ERROR
+        
 
     @staticmethod
     def  getfile(user,  remote_FileName,  local_FileName) :

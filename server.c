@@ -70,7 +70,6 @@ void *tratar_peticion(void *arg) {
         }
         username[rcv] = '\0';
         status = register_user(username);
-        printf("%d\n", status);
     } else if (strcmp(operacion, "UNREGISTER") == 0) {
         char username[255];
         memset(username, 0, sizeof(username));
@@ -241,7 +240,7 @@ void *tratar_peticion(void *arg) {
         }
         username[rcv] = '\0';
         int users =  connected_count(username);
-        struct user * list[50];
+        struct user * list[users];
         status = list_users(username, list);
         if (status == 0){
             char usuarios[1024];
@@ -252,6 +251,50 @@ void *tratar_peticion(void *arg) {
             }
             strcat(usuarios, "\0");
             send(sc,usuarios, strlen(usuarios),0);
+        }
+    }else if(strcmp(operacion, "LIST_CONTENT")==0){
+        char username[255];
+        char prop[255];
+        memset(prop, 0, sizeof(username));
+        memset(username, 0, sizeof(username));
+        rcv = recv(sc, username, sizeof(username), 0);
+        if (rcv <= 0) {
+            printf("Error al recibir el username\n");
+            close(sc);
+            pthread_exit(NULL);
+        }
+        printf("%d\n", username);
+        rcv = recv(sc, prop, sizeof(prop), 0);
+        if (rcv <= 0) {
+            printf("Error al recibir el username\n");
+            close(sc);
+            pthread_exit(NULL);
+        } 
+        char * lista_archivos[100];
+        for (int i = 0; i < 100; i++) {
+            lista_archivos[i] = malloc(100);
+            if (!lista_archivos[i]) {
+                close(sc);
+                pthread_exit(NULL);
+            }
+        }
+        status = list_content(user, propietario, lista_archivos, &n);
+        
+        if (status == 0){
+            char archivos[1024] = {0}; // Initialize buffer
+            char aux[100];
+            
+            for(int i = 0; i < n; ++i){
+                snprintf(aux, sizeof(aux), "   %s \n", lista_archivos[i]);
+                strncat(archivos, aux, sizeof(archivos) - strlen(archivos) - 1);
+            }
+            
+            send(sc, archivos, strlen(archivos), 0);
+        }
+    
+        // Free memory
+        for (int i = 0; i < 255; i++) {
+            free(lista_archivos[i]);
         }
     }else {
         printf("Operación no reconocida\n");

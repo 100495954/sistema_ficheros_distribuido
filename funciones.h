@@ -35,6 +35,8 @@ int delete_file(char *username, char *filename);
 
 int list_users(char *username, struct user **lista_usuarios);
 
+int list_content(char *username, char *propietario, char **lista_archivos, int *n);
+
 int connected_count(char *username);
 
 #endif

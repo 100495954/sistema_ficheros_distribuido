@@ -299,6 +299,57 @@ int list_users(char *username, struct user **lista_usuarios){
     pthread_mutex_unlock(&mutex_server);
     return 0;
 }
+
+int list_content(char *username, char *propietario, char **lista_archivos, int *n){
+    pthread_mutex_lock(&mutex_server);
+    struct user *temp_user = head;
+    int exist = 0;
+    while (temp_user!=NULL){
+        if (strcmp(temp_user->username, username)==0){
+            exist = 1;
+            break;
+        }
+        temp_user = temp_user->next;
+    }
+    if(exist == 0){
+        pthread_mutex_unlock(&mutex_server);
+        return 1;
+    }
+    int connected  = check_conexion(username);
+    if (connected == 0){
+        pthread_mutex_unlock(&mutex_server);
+        return 2;
+    }
+    exist= 0;
+    temp_user = head;
+    while (temp_user!=NULL){
+        if (strcmp(temp_user->username, propietario)==0){
+            exist = 1;
+            break;
+        }
+        temp_user = temp_user->next;
+    }
+    if(exist == 0){
+        pthread_mutex_unlock(&mutex_server);
+        return 1;
+    }
+    temp_user = head;
+    while (temp_user != NULL){
+        if (strcmp(temp_user->username, propietario) == 0) {
+            struct file *file = temp_user->file_list;
+            while (file != NULL){
+                strcpy(lista_archivos[*n], file->filename);
+                printf("%s\n",lista_archivos[*n]);
+                *n +=1;
+                file = file->next;
+            }
+            break;
+        }
+        temp_user = temp_user->next;
+    }
+    return 0;
+}
+
 int connected_count(char *username){
     pthread_mutex_lock(&mutex_server);
     int count= 0;
