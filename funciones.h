@@ -21,7 +21,7 @@ int unregister_user(char *username);
 
 int exist_user(char *username);
 
-int connect_user(char *username, int port);
+int connect_user(char *username, int port, char *ip);
 
 int disconnect_user(char *username);
 

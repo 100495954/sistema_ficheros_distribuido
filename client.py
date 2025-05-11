@@ -2,6 +2,8 @@ from enum import Enum
 import argparse
 import socket
 import threading
+import os
+import requests
 
 class client :
 
@@ -62,6 +64,18 @@ class client :
         except Exception as e:
             print(f"Error al recibir: {e}")
             return None
+        
+    @staticmethod
+    def obtener_datetime():
+        try:
+            respuesta = requests.get("http://127.0.0.1:5000/datetime")
+            if respuesta.status_code == 200:
+                return respuesta.json()['datetime']
+            else:
+                return None
+        except Exception as e:
+            print("Error al obtener la fecha:", e)
+            return None
 
     @staticmethod
     def register(user):
@@ -83,6 +97,14 @@ class client :
         # Enviar username
         if client.enviar(sd, (user + '\0')) == -1:
             return client.RC.ERROR
+        
+        # Obtener y enviar datetime
+        '''datetime = client.obtener_datetime()
+        print(datetime)
+        if datetime is None:
+            return client.RC.ERROR
+        if client.enviar(sd, (datetime + '\0')) == -1:
+            return client.RC.ERROR'''
 
         # Recibir respuesta
         status = client.recibir(sd)
@@ -136,23 +158,62 @@ class client :
         return client.RC.OK
 
     @staticmethod
-    def servicio_cliente():
+    def recibir_cadena(sock):
+        data = bytearray()
+        while True:
+            byte = sock.recv(1)
+            if not byte or byte == b'\0':
+                break
+            data.extend(byte)
+        return data.decode()
+
+    @staticmethod
+    def tratar_peticion():
         while client._keep_listening:
-            #manejar peticiones aqui
-            print("Hola")
+            try:
+                sc, ad = client._listen_sock.accept()
+            except OSError as e:
+                print("Error al aceptar conexión:", e)
+                break
+            try:
+                operacion = client.recibir_cadena(sc)
+                if operacion == "GET_FILE":
+                    path = client.recibir_cadena(sc).strip().strip('\0')
+                    print(path)
+                    if not os.path.isfile(path):
+                        # El archivo no existe
+                        sc.send(b'\x01')
+                    else:
+                        try:
+                            with open(path, 'rb') as file:
+                                contenido = file.read()
+                            # Todo bien
+                            sc.send(b'\x00')
+                            size = str(len(contenido)) + '\0'
+                            sc.sendall(size.encode('utf-8'))
+                            sc.sendall(contenido)
+                        except Exception:
+                            # Error al abrir el file
+                            sc.send(b'\x02')
+                            print("Error:", e)
+                else:
+                    print("Operación desconocida:", operacion)
+            except Exception as e:
+                    print("Error al procesar la petición:", e)    
+            finally:
+                sc.close()
     
     @staticmethod
     def  connect(user) :
         #1 y 2 socket de escucha del cliente, busco puerto válido libre
         client._listen_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client._listen_sock.bind(('', 0))
+        listen_ip = client._listen_sock.getsockname()[0]
         listen_port = client._listen_sock.getsockname()[1]
         client._listen_sock.listen(5)
 
         #3 hilo para tratar las peticiones de escucha
-        # cambiar servicio cliente, por la que realize el servidor
-        # de escucha del cliente (q ahora mismo no se cual es)
-        #client._listen_thread = threading.Thread(target=client.servicio_cliente, daemon=True).start()
+        client._listen_thread = threading.Thread(target=client.tratar_peticion, daemon=True).start()
 
         #4 enviar solicitud de conexión al servidor
         sd = client.socket_cliente()
@@ -167,6 +228,10 @@ class client :
         # enviar cadena indicando el nombre del usuario
         if (client.enviar(sd, (user + '\0')) != 0):
             print("Error al enviar el nombre del usuario\n")
+
+        # enviar ip de escucha del cliente como cadena
+        if (client.enviar(sd, (str(listen_ip) + '\0')) != 0):
+            print("Error al enviar la ip de escucha\n")
 
         # enviar puerto de escucha del cliente como cadena
         if (client.enviar(sd, (str(listen_port) + '\0')) != 0):
@@ -354,7 +419,7 @@ class client :
             return client.RC.ERROR
 
         # Recibir respuesta
-        listausuarios = client.recibir(sd)
+        listausuarios = client.recibir_cadena(sd)
 
         status = client.recibir(sd)
         status = int(status)
@@ -419,8 +484,81 @@ class client :
         
 
     @staticmethod
+    def extraer_datos(string, user):
+        tokens = string.split()
+        for i in range(len(tokens)):
+            if tokens[i] == user:
+                ip = tokens[i+1]
+                puerto = tokens[i+2]
+                return ip, puerto
+        return None, None
+
+    @staticmethod
     def  getfile(user,  remote_FileName,  local_FileName) :
-        #  Write your code here
+        #1 obtener IP y puerto del usuario
+        operacion = "LIST_USERS\0"
+        sd = client.socket_cliente()
+        if sd == -1:
+            return client.RC.ERROR
+        username = client._user_connected
+        # Enviar operación
+        if client.enviar(sd, operacion) == -1:
+            return client.RC.ERROR
+        
+        if client.enviar(sd, (username + '\0')) == -1:
+            return client.RC.ERROR
+
+        # Recibir respuesta
+        listausuarios = client.recibir_cadena(sd)
+
+        status = client.recibir(sd)
+        status = int(status)
+        sd.close()
+
+        ip, port = client.extraer_datos(listausuarios, user)
+
+        #2 conectarse al socket TCP del cliente
+        sd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        if ip is None or port is None:
+                # print("Error en la ip y puerto del usuario")
+                sd.close()
+                return -1
+        sd.connect((ip, int(port)))
+        if sd == -1:
+            return client.RC.ERROR
+
+        operacion = "GET_FILE\0"
+        #3 enviar cadena con el código de operación
+        if client.enviar(sd, operacion) == -1:
+            return client.RC.ERROR
+        
+        #4 enviar cadena con el path absoluto del fichero
+        if ' ' in remote_FileName:
+            print("Error, la ruta contiene espacios en blanco")
+            return
+        if len(remote_FileName.encode('utf-8')) > 256:
+            print("Error, la ruta supera los 256 bytes permitidos")
+            return
+        if (client.enviar(sd, (remote_FileName + '\0')) != 0):
+            print("Error al enviar la ruta del fichero\n")
+            return
+
+        # recibir byte del servidor
+        respuesta = ord(client.recibir(sd, 1))
+        if (respuesta == 0):
+            size = int(client.recibir_cadena(sd))
+            contenido = client.recibir_cadena(sd)
+            with open(local_FileName, 'wb') as file:
+                file.write(contenido.encode())
+            print("c> GET_FILE OK\n")
+        elif (respuesta == 1):
+            print("c> GET_FILE FAIL, FILE DOES NOT EXIST\n")
+        else:
+            print("c> GET_FILE FAIL\n")
+
+        # cerrar la conexión con el servidor
+        sd.close()
+
         return client.RC.ERROR
 
     # *

@@ -88,7 +88,7 @@ int exist_user(char *username){
 }
 
 // Función que añade un puerto a un usuario previamente registrado
-int connect_user(char *username, int port){
+int connect_user(char *username, int port, char *ip){
     pthread_mutex_lock(&mutex_server);
     struct user *temp = head;
     while (temp != NULL) {
@@ -97,6 +97,7 @@ int connect_user(char *username, int port){
             if (temp->port == 0) {
                 // Usuario no conectado
                 temp->port = port;
+                strncpy(temp->ip_route, ip, sizeof(temp->ip_route)-1);
                 pthread_mutex_unlock(&mutex_server);
                 return 0;
             } else {
