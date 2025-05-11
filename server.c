@@ -279,7 +279,6 @@ void *tratar_peticion(void *arg) {
             close(sc);
             pthread_exit(NULL);
         }
-        printf("%s\n", username);
         rcv = recibir_peticion(sc, propietario, sizeof(propietario));
         if (rcv <= 0) {
             printf("Error al recibir el username\n");
@@ -296,7 +295,6 @@ void *tratar_peticion(void *arg) {
             }
         }
         status = list_content(username, propietario, lista_archivos, &n);
-        
         if (status == 0){
             char archivos[1024] = {0}; // Initialize buffer
             char aux[100];
@@ -306,7 +304,7 @@ void *tratar_peticion(void *arg) {
                 strncat(archivos, aux, sizeof(archivos) - strlen(archivos) - 1);
             }
             
-            send(sc, archivos, strlen(archivos), 0);
+            send(sc, archivos, strlen(archivos)+1, 0);
         }
     
         // Free memory

@@ -208,7 +208,7 @@ int publish_file(char *username, char *filename, char *description) {
                 prev_file->next = new_file;
             }
 
-            temp_user->file_list = new_file;
+            temp_user->file_list = head_file;
             pthread_mutex_unlock(&mutex_server);
             return 0;
         }
@@ -334,20 +334,22 @@ int list_content(char *username, char *propietario, char **lista_archivos, int *
         pthread_mutex_unlock(&mutex_server);
         return 1;
     }
+    int j = 1;
     temp_user = head;
     while (temp_user != NULL){
         if (strcmp(temp_user->username, propietario) == 0) {
             struct file *file = temp_user->file_list;
             while (file != NULL){
-                strcpy(lista_archivos[*n], file->filename);
-                printf("%s\n",lista_archivos[*n]);
-                *n +=1;
+                strncpy(lista_archivos[j], file->filename, 100);
+                ++j;
                 file = file->next;
             }
             break;
         }
         temp_user = temp_user->next;
     }
+    *n = j;
+    pthread_mutex_unlock(&mutex_server);
     return 0;
 }
 

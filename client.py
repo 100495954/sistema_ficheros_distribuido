@@ -365,6 +365,7 @@ class client :
         mensaje = "DELETE\0"
         if (client.enviar(sd, mensaje) != 0):
             print("Error al publicar un fichero\n")
+            sd.close()
             return
 
         # enviar cadena indicando el nombre del usuario
@@ -374,17 +375,21 @@ class client :
             user = client._user_connected
         if (client.enviar(sd, (user + '\0')) != 0):
             print("Error al enviar el nombre del usuario\n")
+            sd.close()
             return 
 
         # enviar cadena con el path absoluto del fichero
         if ' ' in fileName:
             print("Error, la ruta contiene espacios en blanco")
+            sd.close()
             return
         if len(fileName.encode('utf-8')) > 256:
             print("Error, la ruta supera los 256 bytes permitidos")
+            sd.close()
             return
         if (client.enviar(sd, (fileName + '\0')) != 0):
             print("Error al enviar la ruta del fichero\n")
+            sd.close()
             return 
 
         # recibir byte del servidor
@@ -413,9 +418,11 @@ class client :
         username = input("c> ESCRIBE TU USERNAME: ")
         # Enviar operación
         if client.enviar(sd, operacion) == -1:
+            sd.close()
             return client.RC.ERROR
         
         if client.enviar(sd, (username + '\0')) == -1:
+            sd.close()
             return client.RC.ERROR
 
         # Recibir respuesta
@@ -426,14 +433,18 @@ class client :
 
         if status == 2:
             print("c > LIST_USERS FAIL , USER NOT CONNECTED\n")
+            sd.close()
             return client.RC.ERROR
         elif status == 1:
             print("c > LIST_USERS FAIL , USER DOES NOT EXIST\n")
+            sd.close()
             return client.RC.USER_ERROR
         elif status ==3:
             print("c > LIST_USERS FAIL\n")
+            sd.close()
             return client.RC.USER_ERROR
         print("c> LIST_USERS OK\n", listausuarios)
+        sd.close()
         return client.RC.OK
 
  
@@ -446,30 +457,35 @@ class client :
         # Send operation
         operacion = "LIST_CONTENT\0"
         if client.enviar(sd, operacion) == -1:
+            sd.close()
             return client.RC.ERROR
         
         # Send current username (the one making the request)
         current_user = client._user_connected if client._user_connected else ""
         if client.enviar(sd, (current_user + '\0')) == -1:
+            sd.close()
             return client.RC.ERROR
         # Send owner username (the one whose files we want to list)
         if client.enviar(sd, (user + '\0')) == -1:
+            sd.close()
             return client.RC.ERROR
         
         # Receive file list
-        listafiles = client.recibir(sd)
+        listafiles = client.recibir_cadena(sd)
         if listafiles is None:
+            sd.close()
             return client.RC.ERROR
         
         # Receive status
         status = client.recibir(sd)
         if status is None:
+            sd.close()  
             return client.RC.ERROR
-        
         status = int(status)
         
         if status == 0:
             print(f"c> LIST_CONTENT OK\n{listafiles}")
+            sd.close()
             return client.RC.OK
         elif status == 1:
             print("c> LIST_CONTENT FAIL, USER DOES NOT EXIST\n")
@@ -480,6 +496,7 @@ class client :
         else:
             print("c> LIST_CONTENT FAIL\n")
         
+        sd.close()
         return client.RC.ERROR
         
 
