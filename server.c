@@ -270,23 +270,24 @@ void *tratar_peticion(void *arg) {
         }
     }else if(strcmp(operacion, "LIST_CONTENT")==0){
         char username[255];
-        char prop[255];
-        memset(prop, 0, sizeof(username));
+        char propietario[255];
+        memset(propietario, 0, sizeof(propietario));
         memset(username, 0, sizeof(username));
-        rcv = recv(sc, username, sizeof(username), 0);
+        rcv = recibir_peticion(sc, username, sizeof(username));
         if (rcv <= 0) {
             printf("Error al recibir el username\n");
             close(sc);
             pthread_exit(NULL);
         }
-        printf("%d\n", username);
-        rcv = recv(sc, prop, sizeof(prop), 0);
+        printf("%s\n", username);
+        rcv = recibir_peticion(sc, propietario, sizeof(propietario));
         if (rcv <= 0) {
             printf("Error al recibir el username\n");
             close(sc);
             pthread_exit(NULL);
         } 
         char * lista_archivos[100];
+        int n = 0;
         for (int i = 0; i < 100; i++) {
             lista_archivos[i] = malloc(100);
             if (!lista_archivos[i]) {
@@ -294,7 +295,7 @@ void *tratar_peticion(void *arg) {
                 pthread_exit(NULL);
             }
         }
-        status = list_content(user, propietario, lista_archivos, &n);
+        status = list_content(username, propietario, lista_archivos, &n);
         
         if (status == 0){
             char archivos[1024] = {0}; // Initialize buffer
@@ -309,7 +310,7 @@ void *tratar_peticion(void *arg) {
         }
     
         // Free memory
-        for (int i = 0; i < 255; i++) {
+        for (int i = 0; i < 100; i++) {
             free(lista_archivos[i]);
         }
     }else {
