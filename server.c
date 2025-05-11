@@ -61,13 +61,22 @@ void *tratar_peticion(void *arg) {
     // Lógica según operación
     if (strcmp(operacion, "REGISTER") == 0) {
         char username[255];
+        char datetime[255];
         memset(username, 0, sizeof(username));
-        rcv = recv(sc, username, sizeof(username), 0);
+        memset(datetime, 0, sizeof(datetime));
+        rcv = recibir_peticion(sc, username, sizeof(username));
         if (rcv <= 0) {
             printf("Error al recibir el username\n");
             close(sc);
             pthread_exit(NULL);
         }
+        rcv = recibir_peticion(sc, datetime, sizeof(datetime));
+        if (rcv <= 0) {
+            printf("Error al recibir el username\n");
+            close(sc);
+            pthread_exit(NULL);
+        }
+        printf("%s", datetime);
         username[rcv] = '\0';
         status = register_user(username);
         printf("%d\n", status);
@@ -84,12 +93,19 @@ void *tratar_peticion(void *arg) {
         status = unregister_user(username);
     } else if (strcmp(operacion, "CONNECT") == 0) {
         char username[255];
+        char ip[255];
         char port[255];
         memset(username, 0, sizeof(username));
         memset(port, 0, sizeof(port));
         rcv = recibir_peticion(sc, username, sizeof(username));
         if (rcv <= 0) {
             printf("Error al recibir el username\n");
+            close(sc);
+            pthread_exit(NULL);
+        }
+        rcv = recibir_peticion(sc, ip, sizeof(ip));
+        if (rcv <= 0) {
+            printf("Error al recibir la ip\n");
             close(sc);
             pthread_exit(NULL);
         }
@@ -107,7 +123,7 @@ void *tratar_peticion(void *arg) {
         }
         if (exist == 1) {
             // El usuario existe
-            status = connect_user(username, atoi(port));
+            status = connect_user(username, atoi(port), ip);
         } else {
             // El usuario no existe
             status = 1;
@@ -233,7 +249,7 @@ void *tratar_peticion(void *arg) {
     } else if (strcmp(operacion, "LIST_USERS")==0){
         char username[255];
         memset(username, 0, sizeof(username));
-        rcv = recv(sc, username, sizeof(username), 0);
+        rcv = recibir_peticion(sc, username, sizeof(username));
         if (rcv <= 0) {
             printf("Error al recibir el username\n");
             close(sc);
@@ -250,8 +266,8 @@ void *tratar_peticion(void *arg) {
                 sprintf(aux, "\t %s %s %d \n", list[i]->username , list[i]->ip_route, list[i]->port);
                 strcat(usuarios, aux);
             }
-            strcat(usuarios, "\0");
-            send(sc,usuarios, strlen(usuarios),0);
+            //strcat(usuarios, "\0");
+            send(sc,usuarios, strlen(usuarios)+1,0);
         }
     }else {
         printf("Operación no reconocida\n");
